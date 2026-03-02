@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-app.use(cors({ origin: '*' }));
+const app = express();
 
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
