@@ -113,6 +113,35 @@ app.get("/discord-user", async (req, res) => {
   }
 });
 
+
+// ── التحقق من Steam OpenID ─────────────────────────────────
+app.post('/steam-verify', async (req, res) => {
+  try {
+    const { params } = req.body;
+    if (!params) return res.status(400).json({ error: 'params required' });
+
+    // بناء query string للتحقق
+    const verifyParams = { ...params };
+    verifyParams['openid.mode'] = 'check_authentication';
+
+    const queryString = Object.entries(verifyParams)
+      .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v))
+      .join('&');
+
+    const r = await fetch('https://steamcommunity.com/openid/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: queryString
+    });
+
+    const text = await r.text();
+    const valid = text.includes('is_valid:true');
+    res.json({ valid });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Health check ───────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'TSRP Discord Bridge' }));
 
