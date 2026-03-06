@@ -142,6 +142,78 @@ app.post('/steam-verify', async (req, res) => {
   }
 });
 
+// ── txAdmin Proxy ──────────────────────────────────────────
+app.post('/txadmin-proxy', async (req, res) => {
+  try {
+    const { txUrl, txToken, action, playerId, reason, duration, message } = req.body;
+    if (!txUrl || !txToken) return res.status(400).json({ error: 'txUrl and txToken required' });
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${Buffer.from(`:${txToken}`).toString('base64')}`
+    };
+
+    // جلب قائمة اللاعبين
+    if (action === 'players') {
+      const r = await fetch(`${txUrl}/players/list`, { headers });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      const data = await r.json();
+      return res.json({ players: data.players || data.data || data || [] });
+    }
+
+    // التحقق من الاتصال
+    if (action === 'status') {
+      const r = await fetch(`${txUrl}/status`, { headers });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      return res.json({ success: true, ...(await r.json()) });
+    }
+
+    // تحذير
+    if (action === 'warn') {
+      const r = await fetch(`${txUrl}/players/action`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ action: 'warn', id: playerId, reason: reason || 'تحذير من الإدارة' })
+      });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      return res.json({ success: true });
+    }
+
+    // طرد
+    if (action === 'kick') {
+      const r = await fetch(`${txUrl}/players/action`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ action: 'kick', id: playerId, reason: reason || 'طرد من الإدارة' })
+      });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      return res.json({ success: true });
+    }
+
+    // حظر
+    if (action === 'ban') {
+      const r = await fetch(`${txUrl}/players/action`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ action: 'ban', id: playerId, reason: reason || 'حظر من الإدارة', duration: duration || 'permanent' })
+      });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      return res.json({ success: true });
+    }
+
+    // رسالة
+    if (action === 'message') {
+      const r = await fetch(`${txUrl}/players/action`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ action: 'message', id: playerId, message: message || '' })
+      });
+      if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+      return res.json({ success: true });
+    }
+
+    res.status(400).json({ error: 'unknown action' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Health check ───────────────────────────────────────────
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'TSRP Discord Bridge' }));
 
