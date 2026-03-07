@@ -6,10 +6,19 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
+const GUILD_ID  = process.env.DISCORD_GUILD_ID;
+const SECRET_KEY = process.env.SECRET_KEY || '';
+
+// ── middleware تحقق من السيكريت ──────────────────────────────
+function checkSecret(req, res, next) {
+  if (!SECRET_KEY) return next(); // إذا ما في secret محدد، اسمح للكل
+  const provided = req.headers['x-secret'] || '';
+  if (provided !== SECRET_KEY) return res.status(403).json({ error: 'Forbidden' });
+  next();
+}
 
 // ── إرسال DM ──────────────────────────────────────────────
-app.post('/discord-dm', async (req, res) => {
+app.post('/discord-dm', checkSecret, async (req, res) => {
   try {
     const { userId, payload } = req.body;
     if (!userId || !payload) return res.status(400).json({ error: 'userId and payload required' });
